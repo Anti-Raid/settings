@@ -252,7 +252,7 @@ pub fn settings_wrap<T>(v: T) -> Arc<T> {
 }
 
 #[async_trait]
-pub trait SettingView<SettingsData: Clone>: Send + Sync {
+pub trait SettingView<SettingsData: Clone> {
     /// View the settings data
     ///
     /// All Executors should return an __count value containing the total count of the total number of entries
@@ -264,7 +264,7 @@ pub trait SettingView<SettingsData: Clone>: Send + Sync {
 }
 
 #[async_trait]
-pub trait SettingCreator<SettingsData: Clone>: Send + Sync {
+pub trait SettingCreator<SettingsData: Clone> {
     /// Creates the setting
     async fn create<'a>(
         &self,
@@ -274,7 +274,7 @@ pub trait SettingCreator<SettingsData: Clone>: Send + Sync {
 }
 
 #[async_trait]
-pub trait SettingUpdater<SettingsData: Clone>: Send + Sync {
+pub trait SettingUpdater<SettingsData: Clone> {
     /// Updates the setting
     async fn update<'a>(
         &self,
@@ -284,7 +284,7 @@ pub trait SettingUpdater<SettingsData: Clone>: Send + Sync {
 }
 
 #[async_trait]
-pub trait SettingDeleter<SettingsData: Clone>: Send + Sync {
+pub trait SettingDeleter<SettingsData: Clone> {
     /// Deletes the setting
     async fn delete<'a>(&self, context: &SettingsData, pkey: Value) -> Result<(), SettingsError>;
 }
