@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::types::{Column, ColumnType, InnerColumnType, OperationType, Setting};
-use crate::value::Value;
+use serde_json::{Number, Value};
 
 /// Parse a numeric list from a string without knowing its separator
 fn parse_numeric_list<T: std::str::FromStr + Send + Sync>(
@@ -59,9 +59,9 @@ fn convert_bitflags_string_to_value(
                 }
             }
 
-            Value::Integer(bitflags)
+            Value::Number(bitflags.into())
         }
-        None => Value::None,
+        None => Value::Null,
     }
 }
 
@@ -90,7 +90,7 @@ fn serenity_resolvedvalue_to_value(
                 return Ok(Value::String(id.to_string()));
             }
             serenity::all::Unresolved::Unknown(_) => {
-                return Ok(Value::None);
+                return Ok(Value::Null);
             }
             _ => {}
         },
@@ -134,14 +134,14 @@ fn serenity_resolvedvalue_to_value(
                 let mut new_list = Vec::new();
 
                 for v in list {
-                    new_list.push(Value::Integer(v));
+                    new_list.push(Value::Number(v.into()));
                 }
 
-                return Ok(Value::List(new_list));
+                return Ok(Value::Array(new_list));
             } else {
                 match rv {
                     serenity::all::ResolvedValue::Integer(v) => {
-                        return Ok(Value::Integer(*v));
+                        return Ok(Value::Number((*v).into()));
                     }
                     _ => return Err("Expected integer, got something else".into()),
                 }
@@ -155,14 +155,18 @@ fn serenity_resolvedvalue_to_value(
                 let mut new_list = Vec::new();
 
                 for v in list {
-                    new_list.push(Value::Float(v));
+                    new_list.push(Value::Number(
+                        Number::from_f64(v).ok_or("Failed to convert to f64")?,
+                    ));
                 }
 
-                return Ok(Value::List(new_list));
+                return Ok(Value::Array(new_list));
             } else {
                 match rv {
                     serenity::all::ResolvedValue::Number(v) => {
-                        return Ok(Value::Float(*v));
+                        return Ok(Value::Number(
+                            Number::from_f64(*v).ok_or("Failed to convert to f64")?,
+                        ));
                     }
                     _ => return Err("Expected float, got something else".into()),
                 }
@@ -176,14 +180,14 @@ fn serenity_resolvedvalue_to_value(
                 let mut new_list = Vec::new();
 
                 for v in list {
-                    new_list.push(Value::Boolean(v));
+                    new_list.push(Value::Bool(v));
                 }
 
-                return Ok(Value::List(new_list));
+                return Ok(Value::Array(new_list));
             } else {
                 match rv {
                     serenity::all::ResolvedValue::Boolean(v) => {
-                        return Ok(Value::Boolean(*v));
+                        return Ok(Value::Bool(*v));
                     }
                     _ => return Err("Expected boolean, got something else".into()),
                 }
@@ -228,7 +232,7 @@ fn serenity_resolvedvalue_to_value(
             new_list.push(Value::String(v));
         }
 
-        Ok(Value::List(new_list))
+        Ok(Value::Array(new_list))
     } else {
         Ok(Value::String(pot_output))
     }

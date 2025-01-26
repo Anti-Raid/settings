@@ -1,6 +1,6 @@
 use crate::cfg::{settings_create, settings_delete, settings_update, settings_view};
 use crate::types::{ColumnType, InnerColumnType, Setting};
-use crate::value::Value;
+use serde_json::Value;
 use serenity::all::CreateMessage;
 use serenity::futures::StreamExt;
 use std::time::Duration;
@@ -16,8 +16,13 @@ fn _get_display_value(column_type: &ColumnType, value: &Value) -> String {
             },
             InnerColumnType::BitFlag { values } => {
                 let v = match value {
-                    Value::Integer(v) => *v,
-                    Value::Float(v) => *v as i64,
+                    Value::Number(v) => {
+                        if let Some(v) = v.as_i64() {
+                            v
+                        } else {
+                            return value.to_string();
+                        }
+                    }
                     Value::String(v) => {
                         if let Ok(v) = v.parse::<i64>() {
                             v
@@ -41,7 +46,7 @@ fn _get_display_value(column_type: &ColumnType, value: &Value) -> String {
         ColumnType::Array { inner } => {
             // Then the value must also be an array, check that or fallback to scalar _get_display_value
             match value {
-                Value::List(values) => values
+                Value::Array(values) => values
                     .iter()
                     .map(|v| _get_display_value(&ColumnType::new_scalar(inner.clone()), v))
                     .collect::<Vec<String>>()

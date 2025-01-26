@@ -1,55 +1,8 @@
-use crate::value::Value;
 use async_trait::async_trait;
+use serde_json::Value;
 use std::sync::Arc;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum SettingsError {
-    /// Operation not supported
-    OperationNotSupported {
-        operation: OperationType,
-    },
-    /// Generic error
-    Generic {
-        message: String,
-        src: String,
-        typ: String,
-    },
-    /// Schema type validation error
-    SchemaTypeValidationError {
-        column: String,
-        expected_type: String,
-        got_type: String,
-    },
-    /// Schema null value validation error
-    SchemaNullValueValidationError {
-        column: String,
-    },
-    /// Schema check validation error
-    SchemaCheckValidationError {
-        column: String,
-        check: String,
-        error: String,
-        accepted_range: String,
-    },
-    /// Missing or invalid field
-    MissingOrInvalidField {
-        field: String,
-        src: String,
-    },
-    RowExists {
-        column_id: String,
-        count: i64,
-    },
-    RowDoesNotExist {
-        column_id: String,
-    },
-    MaximumCountReached {
-        max: usize,
-        current: usize,
-    },
-}
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[allow(dead_code)]
@@ -91,16 +44,12 @@ impl ColumnType {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[allow(dead_code)]
 pub enum InnerColumnType {
-    Uuid {},
     String {
         min_length: Option<usize>,
         max_length: Option<usize>,
         allowed_values: Vec<String>, // If empty, all values are allowed
-        kind: String,                // e.g. textarea, channel, user, role etc.
+        kind: String, // e.g. uuid, textarea, channel, user, role, interval, timestamp etc.
     },
-    Timestamp {},
-    TimestampTz {},
-    Interval {},
     Integer {},
     Float {},
     BitFlag {
@@ -163,6 +112,17 @@ pub enum OperationType {
     Create,
     Update,
     Delete,
+}
+
+impl std::fmt::Display for OperationType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OperationType::View => write!(f, "View"),
+            OperationType::Create => write!(f, "Create"),
+            OperationType::Update => write!(f, "Update"),
+            OperationType::Delete => write!(f, "Delete"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -260,7 +220,7 @@ pub trait SettingView<SettingsData: Clone>: Send + Sync {
         &self,
         context: &SettingsData,
         filters: indexmap::IndexMap<String, Value>,
-    ) -> Result<Vec<indexmap::IndexMap<String, Value>>, SettingsError>;
+    ) -> Result<Vec<indexmap::IndexMap<String, Value>>, Error>;
 }
 
 #[async_trait]
@@ -270,7 +230,7 @@ pub trait SettingCreator<SettingsData: Clone>: Send + Sync {
         &self,
         context: &SettingsData,
         state: indexmap::IndexMap<String, Value>,
-    ) -> Result<indexmap::IndexMap<String, Value>, SettingsError>;
+    ) -> Result<indexmap::IndexMap<String, Value>, Error>;
 }
 
 #[async_trait]
@@ -280,13 +240,13 @@ pub trait SettingUpdater<SettingsData: Clone>: Send + Sync {
         &self,
         context: &SettingsData,
         state: indexmap::IndexMap<String, Value>,
-    ) -> Result<indexmap::IndexMap<String, Value>, SettingsError>;
+    ) -> Result<indexmap::IndexMap<String, Value>, Error>;
 }
 
 #[async_trait]
 pub trait SettingDeleter<SettingsData: Clone>: Send + Sync {
     /// Deletes the setting
-    async fn delete<'a>(&self, context: &SettingsData, pkey: Value) -> Result<(), SettingsError>;
+    async fn delete<'a>(&self, context: &SettingsData, pkey: Value) -> Result<(), Error>;
 }
 
 impl<SettingsData: Clone> SettingOperations<SettingsData> {
