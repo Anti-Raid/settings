@@ -395,7 +395,7 @@ fn _parse_value(
                                 }
                             };
 
-                            Ok(Value::Json(v))
+                            Ok(Value::from_json(&v))
                         }
                         _ => {
                             let bytes = serde_json::to_string(&v.to_json()).map_err(|e| {
