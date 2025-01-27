@@ -10,12 +10,16 @@ fn validate_value(
     column_id: &str,
     nullable: bool,
 ) -> Result<Value, Error> {
-    if !nullable && v == Value::Null {
-        return Err(format!(
-            "Validation error in column {}, expected non-nullable value but got null",
-            column_id
-        )
-        .into());
+    if v == Value::Null {
+        if !nullable {
+            return Err(format!(
+                "Validation error in column {}, expected non-nullable value but got null",
+                column_id
+            )
+            .into());
+        } else {
+            return Ok(Value::Null);
+        }
     }
 
     match &column_type {
