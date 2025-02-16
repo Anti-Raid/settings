@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::types::{Column, ColumnType, InnerColumnType, OperationType, Setting};
 use serde_json::{Number, Value};
+use serenity::all::CommandOptionType;
 
 /// Parse a numeric list from a string without knowing its separator
 fn parse_numeric_list<T: std::str::FromStr + Send + Sync>(
@@ -349,6 +350,7 @@ pub async fn subcommand_command<Data: Clone>(
     }
 }
 
+/// Create a command from a setting
 pub fn create_commands_from_setting<'a, Data: Clone>(
     setting: &Setting<Data>,
 ) -> serenity::all::CreateCommand<'a> {
@@ -365,6 +367,30 @@ pub fn create_commands_from_setting<'a, Data: Clone>(
         .set_options(create_subcommands_from_setting(setting));
 
     cmd
+}
+
+/// Create a command from a setting with a root command. This will use a subcommand group
+/// which contains the subcommands for adding, updating, deleting, and viewing the setting
+pub fn create_commands_from_setting_with_root<'a, Data: Clone>(
+    setting: &Setting<Data>,
+    root: serenity::all::CreateCommand<'a>,
+) -> serenity::all::CreateCommand<'a> {
+    let subcommands = create_subcommands_from_setting(setting);
+
+    let subcommand_group = serenity::all::CreateCommandOption::new(
+        CommandOptionType::SubCommandGroup,
+        setting.id.to_string(),
+        {
+            if setting.description.len() > 50 {
+                setting.description[..47].to_string() + "..."
+            } else {
+                setting.description.to_string()
+            }
+        },
+    )
+    .set_sub_options(subcommands);
+
+    root.add_option(subcommand_group)
 }
 
 fn create_subcommands_from_setting<'a, Data: Clone>(
