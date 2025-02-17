@@ -200,6 +200,12 @@ fn serenity_resolvedvalue_to_value(
                     serenity::all::ResolvedValue::String(v) => {
                         return Ok(Value::String(v.to_string()));
                     }
+                    serenity::all::ResolvedValue::Role(v) => {
+                        return Ok(Value::String(v.id.to_string()));
+                    }
+                    serenity::all::ResolvedValue::Channel(v) => {
+                        return Ok(Value::String(v.id.to_string()));
+                    }
                     _ => return Err("Expected string, got something else".into()),
                 }
             }
