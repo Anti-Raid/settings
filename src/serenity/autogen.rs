@@ -466,16 +466,12 @@ fn create_command_for_operation_type<'a, Data: Clone>(
 ) -> serenity::all::CreateCommandOption<'a> {
     let mut args = serenity::all::CreateCommandOption::new(
         serenity::all::CommandOptionType::SubCommand,
-        format!(
-            "{} {}",
-            config_opt.id,
-            match operation_type {
-                OperationType::View => "view",
-                OperationType::Create => "create",
-                OperationType::Update => "update",
-                OperationType::Delete => "delete",
-            }
-        ),
+        match operation_type {
+            OperationType::View => "view",
+            OperationType::Create => "create",
+            OperationType::Update => "update",
+            OperationType::Delete => "delete",
+        },
         {
             if config_opt.description.len() > 50 {
                 config_opt.description[..47].to_string() + "..."
