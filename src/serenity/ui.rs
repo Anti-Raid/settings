@@ -9,10 +9,10 @@ fn _get_display_value(column_type: &ColumnType, value: &Value) -> String {
     match column_type {
         ColumnType::Scalar { inner } => match inner {
             InnerColumnType::String { kind, .. } => match kind.as_str() {
-                "channel" => format!("<#{}>", value),
-                "role" => format!("<@&{}>", value),
-                "user" => format!("<@{}>", value),
-                _ => value.to_string(),
+                "channel" => format!("<#{}>", value.as_str().unwrap_or_default()),
+                "role" => format!("<@&{}>", value.as_str().unwrap_or_default()),
+                "user" => format!("<@{}>", value.as_str().unwrap_or_default()),
+                _ => value.as_str().unwrap_or_default().to_string(),
             },
             InnerColumnType::BitFlag { values } => {
                 let v = match value {
