@@ -241,9 +241,9 @@ fn serenity_resolvedvalue_to_value(
 
 /// In order to provide state to the subcommand callback, we need to wrap it in a struct and then pass it through custom_data
 pub struct SubcommandCallbackWrapper<Data: Clone> {
-    config_option: Setting<Data>,
-    data: Arc<Data>,
-    operation_type: OperationType,
+    pub config_option: Setting<Data>,
+    pub data: Arc<Data>,
+    pub operation_type: OperationType,
 }
 
 /// Gets the values from a serenity ResolvedValue handling choices and all that garbage
