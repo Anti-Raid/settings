@@ -333,7 +333,45 @@ pub async fn subcommand_command<Data: Clone>(
             .await
         }
         OperationType::Update => {
-            let entry = getvalues(&subcommand_callback_wrapper.config_option, interaction)?;
+            let mut entry = getvalues(&subcommand_callback_wrapper.config_option, interaction)?;
+
+            // Attempt to autofill from created data if possible
+            if subcommand_callback_wrapper
+                .config_option
+                .operations
+                .view
+                .is_some()
+            {
+                if let Some(pkey) =
+                    entry.get(&subcommand_callback_wrapper.config_option.primary_key)
+                {
+                    let values = crate::cfg::settings_view(
+                        &subcommand_callback_wrapper.config_option,
+                        &subcommand_callback_wrapper.data,
+                        indexmap::indexmap! {},
+                    )
+                    .await
+                    .map_err(|e| format!("Error fetching settings for autofill: {:?}", e))?;
+
+                    // Find value with primary key that matches the update
+                    for value in values {
+                        if let Some(value_pkey) =
+                            value.get(&subcommand_callback_wrapper.config_option.primary_key)
+                        {
+                            if value_pkey == pkey {
+                                for (key, value) in value {
+                                    if entry.contains_key(&key) {
+                                        continue;
+                                    }
+
+                                    entry.insert(key, value);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
 
             super::ui::settings_updater(
                 super::ui::Src::Interaction((cmd_interaction, ctx, cmd_interaction.user.id)),
