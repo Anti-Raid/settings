@@ -12,7 +12,7 @@ fn _get_display_value(column_type: &ColumnType, value: &Value) -> String {
                 "channel" => format!("<#{}>", value.as_str().unwrap_or_default()),
                 "role" => format!("<@&{}>", value.as_str().unwrap_or_default()),
                 "user" => format!("<@{}>", value.as_str().unwrap_or_default()),
-                _ => value.as_str().unwrap_or_default().to_string(),
+                _ => format!("``{}``", value.as_str().unwrap_or_default()),
             },
             InnerColumnType::BitFlag { values } => {
                 let v = match value {
