@@ -260,8 +260,8 @@ fn getvalues<Data: Clone>(
     let Some(resolved_args) = resolved_args
         .into_iter()
         .find_map(|option| match option.value {
-            serenity::all::ResolvedValue::SubCommand(o)
-            | serenity::all::ResolvedValue::SubCommandGroup(o) => {
+            serenity::all::ResolvedValue::SubCommand(o) => Some(o),
+            serenity::all::ResolvedValue::SubCommandGroup(o) => {
                 // Extract out the first subcommand
                 if let Some(first) = o.into_iter().next() {
                     match first.value {
