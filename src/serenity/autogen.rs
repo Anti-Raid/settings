@@ -236,6 +236,10 @@ fn serenity_resolvedvalue_to_value(
         let mut new_list = Vec::new();
 
         for v in list {
+            if v.is_empty() {
+                continue;
+            }
+
             new_list.push(Value::String(v));
         }
 
@@ -405,6 +409,96 @@ pub async fn subcommand_command<Data: Clone>(
     }
 }
 
+/// An autocomplete callback
+pub async fn subcommand_autocomplete<Data: Clone>(
+    ctx: &serenity::all::Context,
+    interaction: &serenity::all::Interaction,
+    subcommand_callback_wrapper: SubcommandCallbackWrapper<Data>,
+) -> Result<(), crate::Error> {
+    let cmd_interaction = match interaction {
+        serenity::all::Interaction::Autocomplete(interaction) => interaction,
+        _ => return Err("Invalid interaction type".into()),
+    };
+
+    let Some(autocomplete_option) = cmd_interaction.data.autocomplete() else {
+        return Err("Invalid interaction data [expected autocomplete]".into());
+    };
+
+    let columns = &subcommand_callback_wrapper.config_option.columns;
+    let Some(column) = columns.iter().find(|c| c.id == autocomplete_option.name) else {
+        return Err("Invalid column".into());
+    };
+
+    let options = match &column.column_type {
+        ColumnType::Scalar { inner } => match inner {
+            InnerColumnType::String { allowed_values, .. } => {
+                let mut choices = Vec::new();
+
+                for value in allowed_values {
+                    if autocomplete_option.value.contains(value) {
+                        choices.push(serenity::all::AutocompleteChoice::new(
+                            value.clone(),
+                            value.clone(),
+                        ));
+                    }
+                }
+
+                choices
+            }
+            _ => return Ok(()),
+        },
+        ColumnType::Array { inner } => match inner {
+            InnerColumnType::String { allowed_values, .. } => {
+                let mut choices = Vec::new();
+
+                let autocomp_values = split_input_to_string(autocomplete_option.value, ",");
+                let last_value = match autocomp_values.last() {
+                    Some(v) => v,
+                    None => &"".to_string(),
+                };
+
+                for value in allowed_values {
+                    if last_value.contains(value) {
+                        let autocomplete_choice_value = format!(
+                            "{},{}",
+                            autocomp_values[..autocomp_values.len() - 1].join(","),
+                            value
+                        );
+                        choices.push(serenity::all::AutocompleteChoice::new(
+                            autocomplete_choice_value.clone(),
+                            autocomplete_choice_value,
+                        ));
+                    }
+                }
+
+                choices
+            }
+            _ => return Ok(()),
+        },
+    };
+
+    if options.is_empty() {
+        return Ok(());
+    }
+
+    cmd_interaction
+        .create_response(
+            &ctx.http,
+            serenity::all::CreateInteractionResponse::Autocomplete(
+                serenity::all::CreateAutocompleteResponse::new().set_choices({
+                    if options.len() > 25 {
+                        options[..25].to_vec()
+                    } else {
+                        options
+                    }
+                }),
+            ),
+        )
+        .await?;
+
+    Ok(())
+}
+
 /// Create a command from a setting
 pub fn create_commands_from_setting<'a, Data: Clone>(
     setting: &Setting<Data>,
@@ -490,7 +584,7 @@ fn get_string_choices_for_column(column: &Column) -> Option<Vec<String>> {
         ColumnType::Scalar { ref inner } => {
             match inner {
                 InnerColumnType::String { allowed_values, .. } => {
-                    if allowed_values.is_empty() {
+                    if allowed_values.is_empty() || allowed_values.len() > 25 {
                         None
                     } else {
                         Some(allowed_values.clone())
@@ -604,7 +698,8 @@ fn create_command_for_operation_type<'a, Data: Clone>(
             config_opt,
             column,
             operation_type,
-        ));
+        ))
+        .set_autocomplete(field_supports_autocomplete(column));
 
         // add string choice
         let arg = match get_string_choices_for_column(column) {
@@ -622,4 +717,19 @@ fn create_command_for_operation_type<'a, Data: Clone>(
     }
 
     args
+}
+
+fn field_supports_autocomplete(field: &Column) -> bool {
+    match &field.column_type {
+        ColumnType::Scalar { ref inner } => match inner {
+            InnerColumnType::String { allowed_values, .. } => allowed_values.len() > 25,
+            _ => false,
+        },
+        ColumnType::Array { inner } => {
+            match inner {
+                InnerColumnType::String { .. } => true, // Arrays do benefit from autocomplete
+                _ => false,
+            }
+        }
+    }
 }
