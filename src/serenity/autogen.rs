@@ -459,7 +459,7 @@ pub async fn subcommand_autocomplete<Data: Clone>(
 
                 for value in allowed_values {
                     if value.contains(last_value) {
-                        if autocomp_values.is_empty() {
+                        if autocomp_values.len() <= 1 {
                             choices.push(serenity::all::AutocompleteChoice::new(
                                 value.clone(),
                                 value.clone(),
