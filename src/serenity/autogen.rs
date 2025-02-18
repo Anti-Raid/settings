@@ -459,15 +459,23 @@ pub async fn subcommand_autocomplete<Data: Clone>(
 
                 for value in allowed_values {
                     if value.contains(last_value) {
-                        let autocomplete_choice_value = format!(
-                            "{},{}",
-                            autocomp_values[..autocomp_values.len() - 1].join(","),
-                            value
-                        );
-                        choices.push(serenity::all::AutocompleteChoice::new(
-                            autocomplete_choice_value.clone(),
-                            autocomplete_choice_value,
-                        ));
+                        if autocomp_values.is_empty() {
+                            choices.push(serenity::all::AutocompleteChoice::new(
+                                value.clone(),
+                                value.clone(),
+                            ));
+                            continue;
+                        } else {
+                            let autocomplete_choice_value = format!(
+                                "{},{}",
+                                autocomp_values[..autocomp_values.len() - 1].join(","),
+                                value
+                            );
+                            choices.push(serenity::all::AutocompleteChoice::new(
+                                autocomplete_choice_value.clone(),
+                                autocomplete_choice_value,
+                            ));
+                        }
                     }
                 }
 
