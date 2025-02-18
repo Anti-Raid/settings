@@ -477,10 +477,6 @@ pub async fn subcommand_autocomplete<Data: Clone>(
         },
     };
 
-    if options.is_empty() {
-        return Ok(());
-    }
-
     cmd_interaction
         .create_response(
             &ctx.http,
