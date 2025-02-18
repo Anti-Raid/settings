@@ -435,7 +435,7 @@ pub async fn subcommand_autocomplete<Data: Clone>(
                 let mut choices = Vec::new();
 
                 for value in allowed_values {
-                    if autocomplete_option.value.contains(value) {
+                    if value.contains(autocomplete_option.value) {
                         choices.push(serenity::all::AutocompleteChoice::new(
                             value.clone(),
                             value.clone(),
@@ -458,7 +458,7 @@ pub async fn subcommand_autocomplete<Data: Clone>(
                 };
 
                 for value in allowed_values {
-                    if last_value.contains(value) {
+                    if value.contains(last_value) {
                         let autocomplete_choice_value = format!(
                             "{},{}",
                             autocomp_values[..autocomp_values.len() - 1].join(","),
