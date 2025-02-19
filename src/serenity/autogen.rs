@@ -731,7 +731,7 @@ fn field_supports_autocomplete(field: &Column) -> bool {
         },
         ColumnType::Array { inner } => {
             match inner {
-                InnerColumnType::String { .. } => true, // Arrays do benefit from autocomplete
+                InnerColumnType::String { allowed_values, .. } => !allowed_values.is_empty(), // Arrays do benefit from autocomplete
                 _ => false,
             }
         }
