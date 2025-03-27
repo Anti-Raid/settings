@@ -58,6 +58,7 @@ pub enum InnerColumnType {
     },
     Boolean {},
     Json {
+        kind: String, // e.g. templateref etc.
         max_bytes: Option<usize>,
     },
 }

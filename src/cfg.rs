@@ -239,7 +239,7 @@ fn validate_value(
                     )
                     .into()),
                 },
-                InnerColumnType::Json { max_bytes } => {
+                InnerColumnType::Json { max_bytes, .. } => {
                     // Convert back to json to get bytes
                     match v {
                         Value::String(s) => {
