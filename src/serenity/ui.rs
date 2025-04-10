@@ -367,13 +367,23 @@ pub async fn settings_deleter<Data: Clone>(
     src: Src<'_>,
     setting: &Setting<Data>,
     data: &Data,
-    pkey: Value,
+    fields: indexmap::IndexMap<String, Value>,
 ) -> Result<(), crate::Error> {
     if setting.operations.delete.is_none() {
         return Err("Unsupported operation (Delete) for setting".into());
     }
 
-    settings_delete(setting, data, pkey.clone())
+    let mut pkey_str = Vec::new();
+
+    for column in setting.columns.iter() {
+        if column.primary_key {
+            if let Some(value) = fields.get(column.id.as_str()) {
+                pkey_str.push(format!("{}: {}", column.name, value));
+            }
+        }
+    }
+
+    settings_delete(setting, data, fields)
         .await
         .map_err(|e| format!("Error deleting setting: {:?}", e))?;
 
@@ -381,8 +391,8 @@ pub async fn settings_deleter<Data: Clone>(
         serenity::all::CreateEmbed::new()
             .title(format!("Deleted {}", setting.name))
             .description(format!(
-                "Deleted {} with primary key {}",
-                setting.name, pkey
+                "Deleted {}: {}",
+                setting.name, pkey_str.join(", ")
             )),
         None,
     )

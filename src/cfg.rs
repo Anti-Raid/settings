@@ -498,26 +498,28 @@ pub async fn settings_update<T: Clone>(
 pub async fn settings_delete<T: Clone>(
     setting: &Setting<T>,
     data: &T,
-    pkey: Value,
+    fields: indexmap::IndexMap<String, Value>,
 ) -> Result<(), Error> {
     let Some(ref deleter) = setting.operations.delete else {
         return Err(format!("Operation not supported: {}", OperationType::Delete).into());
     };
 
-    let Some(pkey_column) = setting.columns.iter().find(|c| c.id == setting.primary_key) else {
-        return Err(
-            "Internal error: Primary key column not found in setting despite being set".into(),
-        );
-    };
+    let mut fields = fields;
+    let mut state = indexmap::IndexMap::with_capacity(setting.columns.len());
+    for column in setting.columns.iter() {
+        if column.ignored_for.contains(&OperationType::Delete) || !column.primary_key {
+            continue;
+        }
 
-    let pkey = validate_value(
-        pkey,
-        &pkey_column.column_type,
-        &setting.primary_key,
-        pkey_column.nullable,
-    )?;
+        let Some(value) = fields.swap_remove(&column.id) else {
+            return Err(format!("Missing or invalid required/primary key field: {}", column.id).into());
+        };
 
-    deleter.delete(data, pkey).await?;
+        let value = validate_value(value, &column.column_type, &column.id, column.nullable)?;
+        state.insert(column.id.to_string(), value);
+    }
+
+    deleter.delete(data, state).await?;
 
     Ok(())
 }

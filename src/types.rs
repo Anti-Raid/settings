@@ -83,6 +83,9 @@ pub struct Column {
     /// The type of the column
     pub column_type: ColumnType,
 
+    /// Whether or not the column is a primary key
+    pub primary_key: bool,
+
     /// Whether or not the column is nullable
     ///
     /// Note that the point where nullability is checked may vary but will occur after pre_checks are executed
@@ -136,9 +139,6 @@ pub struct Setting<SettingsData: Clone> {
 
     /// The description of the option
     pub description: String,
-
-    /// The primary key of the table. Should be present in ID
-    pub primary_key: String,
 
     /// Title template, used for the title of the embed
     pub title_template: String,
@@ -247,7 +247,7 @@ pub trait SettingUpdater<SettingsData: Clone>: Send + Sync {
 #[async_trait]
 pub trait SettingDeleter<SettingsData: Clone>: Send + Sync {
     /// Deletes the setting
-    async fn delete<'a>(&self, context: &SettingsData, pkey: Value) -> Result<(), Error>;
+    async fn delete<'a>(&self, context: &SettingsData, state: indexmap::IndexMap<String, Value>) -> Result<(), Error>;
 }
 
 impl<SettingsData: Clone> SettingOperations<SettingsData> {

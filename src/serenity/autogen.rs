@@ -346,34 +346,49 @@ pub async fn subcommand_command<Data: Clone>(
                 .view
                 .is_some()
             {
-                if let Some(pkey) =
-                    entry.get(&subcommand_callback_wrapper.config_option.primary_key)
-                {
-                    let values = crate::cfg::settings_view(
-                        &subcommand_callback_wrapper.config_option,
-                        &subcommand_callback_wrapper.data,
-                        indexmap::indexmap! {},
-                    )
-                    .await
-                    .map_err(|e| format!("Error fetching settings for autofill: {:?}", e))?;
-
-                    // Find value with primary key that matches the update
-                    for value in values {
-                        if let Some(value_pkey) =
-                            value.get(&subcommand_callback_wrapper.config_option.primary_key)
-                        {
-                            if value_pkey == pkey {
-                                for (key, value) in value {
-                                    if entry.contains_key(&key) {
-                                        continue;
-                                    }
-
-                                    entry.insert(key, value);
-                                }
-                                break;
-                            }
+                let mut pkey_state = indexmap::IndexMap::new();
+                for column in subcommand_callback_wrapper.config_option.columns.iter() {
+                    if column.primary_key {
+                        if let Some(value) = entry.swap_remove(&column.id) {
+                            pkey_state.insert(column.id.clone(), value);
+                        } else {
+                            return Err(format!(
+                                "An input for `{}` is required",
+                                column.id
+                            )
+                            .into());
                         }
                     }
+                }
+
+                let values = crate::cfg::settings_view(
+                    &subcommand_callback_wrapper.config_option,
+                    &subcommand_callback_wrapper.data,
+                    indexmap::indexmap! {},
+                )
+                .await
+                .map_err(|e| format!("Error fetching settings for autofill: {:?}", e))?;
+
+                // Find value with primary key that matches the update
+                for value in values {
+                    for (pkey_key, pkey_value) in pkey_state.iter() {
+                        if let Some(v) = value.get(pkey_key) {
+                            if v != pkey_value {
+                                continue;
+                            }
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    for (key, value) in value {
+                        if entry.contains_key(&key) {
+                            continue;
+                        }
+
+                        entry.insert(key, value);
+                    }
+                    break;
                 }
             }
 
@@ -386,23 +401,13 @@ pub async fn subcommand_command<Data: Clone>(
             .await
         }
         OperationType::Delete => {
-            let mut entry = getvalues(&subcommand_callback_wrapper.config_option, interaction)?;
-
-            let Some(pkey) =
-                entry.swap_remove(&subcommand_callback_wrapper.config_option.primary_key)
-            else {
-                return Err(format!(
-                    "An input for `{}` is required",
-                    subcommand_callback_wrapper.config_option.primary_key
-                )
-                .into());
-            };
+            let entry = getvalues(&subcommand_callback_wrapper.config_option, interaction)?;
 
             super::ui::settings_deleter(
                 super::ui::Src::Interaction((cmd_interaction, ctx, cmd_interaction.user.id)),
                 &subcommand_callback_wrapper.config_option,
                 &subcommand_callback_wrapper.data,
-                pkey,
+                entry,
             )
             .await
         }
@@ -601,12 +606,11 @@ fn get_string_choices_for_column(column: &Column) -> Option<Vec<String>> {
     }
 }
 
-fn is_column_required_for_operation_type<Data: Clone>(
-    config_opt: &Setting<Data>,
+fn is_column_required_for_operation_type(
     column: &Column,
     operation_type: OperationType,
 ) -> bool {
-    if operation_type == OperationType::Update && column.id != config_opt.primary_key {
+    if operation_type == OperationType::Update && !column.primary_key {
         return false;
     }
 
@@ -642,11 +646,11 @@ fn create_command_for_operation_type<'a, Data: Clone>(
     let mut sort_idx = vec![];
 
     for (idx, column) in config_opt.columns.iter().enumerate() {
-        if operation_type == OperationType::Delete && column.id != config_opt.primary_key {
+        if operation_type == OperationType::Delete && !column.primary_key {
             continue; // Skip if not the primary key
         }
 
-        if !is_column_required_for_operation_type(config_opt, column, operation_type) {
+        if !is_column_required_for_operation_type(column, operation_type) {
             sort_idx.push(idx);
         } else {
             sort_idx.insert(0, idx);
@@ -699,7 +703,6 @@ fn create_command_for_operation_type<'a, Data: Clone>(
             },
         )
         .required(is_column_required_for_operation_type(
-            config_opt,
             column,
             operation_type,
         ))
