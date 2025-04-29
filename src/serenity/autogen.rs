@@ -340,6 +340,7 @@ pub async fn subcommand_command<Data: Clone>(
             let mut entry = getvalues(&subcommand_callback_wrapper.config_option, interaction)?;
 
             // Attempt to autofill from created data if possible
+            let mut have_found_for_autofill = false;
             if subcommand_callback_wrapper
                 .config_option
                 .operations
@@ -387,9 +388,21 @@ pub async fn subcommand_command<Data: Clone>(
                         }
 
                         entry.insert(key, value);
+                        have_found_for_autofill = true
                     }
                     break;
                 }
+            }
+
+            if !have_found_for_autofill {
+                // Switch to create impl
+                return super::ui::settings_creator(
+                    super::ui::Src::Interaction((cmd_interaction, ctx, cmd_interaction.user.id)),
+                    &subcommand_callback_wrapper.config_option,
+                    &subcommand_callback_wrapper.data,
+                    entry,
+                )
+                .await;
             }
 
             super::ui::settings_updater(
