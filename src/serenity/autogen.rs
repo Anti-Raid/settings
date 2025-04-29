@@ -382,7 +382,7 @@ pub async fn subcommand_command<Data: Clone>(
                         }
                     }
 
-                    have_found_for_autofill = true
+                    have_found_for_autofill = true;
 
                     for (key, value) in value {
                         if entry.contains_key(&key) {
