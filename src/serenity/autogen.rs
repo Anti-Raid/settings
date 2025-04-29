@@ -350,8 +350,8 @@ pub async fn subcommand_command<Data: Clone>(
                 let mut pkey_state = indexmap::IndexMap::new();
                 for column in subcommand_callback_wrapper.config_option.columns.iter() {
                     if column.primary_key {
-                        if let Some(value) = entry.swap_remove(&column.id) {
-                            pkey_state.insert(column.id.clone(), value);
+                        if let Some(value) = entry.get(&column.id) {
+                            pkey_state.insert(column.id.clone(), value.clone());
                         } else {
                             return Err(format!(
                                 "An input for `{}` is required",
